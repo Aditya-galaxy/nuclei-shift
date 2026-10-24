@@ -4,12 +4,13 @@ Conditions:
   off the shelf  - one setting for every image
   one adaptation - brightness inverted for bright-background images (Cellpose *_inv runs), plain run otherwise
 The classical method always applies the inversion, so it has only the adapted condition.
-Writes results/per_image.csv, results/summary.csv, results/summary.md, results/confidence.csv.
+Writes results/per_image.csv, summary.csv, summary.md, confidence.csv (does mean Cellpose confidence track
+per-image accuracy, and how well does it flag failed images, AUROC) and confidence_by_group.csv.
 """
 import os
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, mannwhitneyu
 import nuclei
 
 groups = pd.read_csv("data/groups.csv").set_index("id")
@@ -43,7 +44,8 @@ for name, (dark_m, bright_m) in CONDITIONS.items():
         lab, conf = got
         s = nuclei.scores(truth[i], lab)
         rows.append({"condition": name, "id": i, "group": groups.loc[i, "group"], **s,
-                     "confidence": float(conf.mean()) if conf.size else np.nan})
+                     # no nuclei found counts as zero confidence: an empty result is itself a warning
+                     "confidence": float(conf.mean()) if conf.size else (0.0 if bright_m.startswith("cp_") else np.nan)})
 per = pd.DataFrame(rows)
 os.makedirs("results", exist_ok=True)
 per.to_csv("results/per_image.csv", index=False)
@@ -58,6 +60,7 @@ summary = pd.DataFrame(summary)
 summary.to_csv("results/summary.csv", index=False)
 
 # confidence: does Cellpose's mean cell probability track per-image accuracy, overall and within groups?
+FAIL = 0.1                                       # an image counts as failed below this score
 conf_rows = []
 for name, d in per.groupby("condition", sort=False):
     d = d.dropna(subset=["confidence"])
@@ -65,9 +68,15 @@ for name, d in per.groupby("condition", sort=False):
         continue
     within = [spearmanr(x.confidence, x.dsb_score).statistic for _, x in d.groupby("group")
               if len(x) > 10 and x.confidence.nunique() > 1 and x.dsb_score.nunique() > 1]
+    fail = d.dsb_score < FAIL
+    a, b = d.confidence[fail], d.confidence[~fail]
+    auroc = mannwhitneyu(b, a).statistic / (len(a) * len(b)) if len(a) and len(b) else np.nan
     conf_rows.append({"condition": name, "spearman_all": spearmanr(d.confidence, d.dsb_score).statistic,
-                      "spearman_within_groups": float(np.nanmean(within))})
+                      "spearman_within_groups": float(np.nanmean(within)),
+                      "failed_images": int(fail.sum()), "auroc_flags_failures": auroc})
 pd.DataFrame(conf_rows).to_csv("results/confidence.csv", index=False)
+(per.dropna(subset=["confidence"]).groupby(["condition", "group"], sort=False)
+    [["confidence", "dsb_score", "n_pred", "n_true"]].mean().round(3).to_csv("results/confidence_by_group.csv"))
 
 order = nuclei.GROUPS
 lines = ["| Method | " + " | ".join(f"{g} (n={int(groups.group.eq(g).sum())})" for g in order) + " |",

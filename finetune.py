@@ -16,7 +16,7 @@ import nuclei
 
 GROUP, N_TEST = "tissue_colour", 58
 KS = [1, 2, 5, 10, 25, 50]
-STEPS = dict(n_epochs=100, nimg_per_epoch=32, batch_size=8, learning_rate=0.005, weight_decay=1e-5)
+STEPS = dict(n_epochs=int(os.environ.get("FT_EPOCHS", 100)), nimg_per_epoch=32, batch_size=8, learning_rate=0.005, weight_decay=1e-5)
 gpu = torch.backends.mps.is_available()
 
 g = pd.read_csv("data/groups.csv")
@@ -46,6 +46,7 @@ for invert in [False, True]:
             pick = list(np.random.default_rng(100 * k + draw).choice(pool, k, replace=False))
             model = models.CellposeModel(gpu=gpu, model_type="nuclei")
             save = f"results/ft_tmp/{variant}_{k}_{draw}"
+            os.makedirs(save, exist_ok=True)              # Cellpose creates only the last folder level
             path, *_ = train.train_seg(model.net, train_data=[grey(i, invert) for i in pick],
                                        train_labels=[truth[i] for i in pick], channels=[0, 0],
                                        save_path=save, model_name="ft", min_train_masks=1, **STEPS)
