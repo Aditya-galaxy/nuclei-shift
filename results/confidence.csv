@@ -1,0 +1,3 @@
+condition,spearman_all,spearman_within_groups
+"cellpose nuclei, off the shelf",0.890360800279206,
+"cellpose nuclei, inverted when bright",0.890360800279206,
