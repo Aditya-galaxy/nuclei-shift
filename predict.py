@@ -7,6 +7,9 @@ For every image it writes <name>_labels.png (16-bit instance labels) and adds a 
 number of nuclei, median nucleus area, mean Cellpose confidence, whether it was inverted, seconds taken.
 --invert auto inverts brightness when the image background is bright (grey median > 0.4), the rule that
 recovered Cellpose on stained tissue in this project's benchmark.
+
+Sharding: when run as one of several parallel tasks (a Cloud Run Job sets CLOUD_RUN_TASK_INDEX and
+CLOUD_RUN_TASK_COUNT), each task takes every N-th image and writes summary-<index>.csv.
 """
 import argparse, csv, os, time
 import numpy as np
@@ -28,7 +31,11 @@ def main():
     model = models.Cellpose(gpu=a.device != "cpu", device=torch.device(a.device), model_type=a.model)
     os.makedirs(a.output, exist_ok=True)
     files = sorted(f for f in os.listdir(a.input) if f.lower().endswith((".png", ".tif", ".tiff", ".jpg")))
-    with open(os.path.join(a.output, "summary.csv"), "w", newline="") as fh:
+    task, n_tasks = int(os.environ.get("CLOUD_RUN_TASK_INDEX", 0)), int(os.environ.get("CLOUD_RUN_TASK_COUNT", 1))
+    files = files[task::n_tasks]
+    name = "summary.csv" if n_tasks == 1 else f"summary-{task}.csv"
+    started = time.perf_counter()
+    with open(os.path.join(a.output, name), "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["file", "n_nuclei", "median_area_px", "mean_confidence", "inverted", "seconds"])
         for f in files:
@@ -44,6 +51,7 @@ def main():
             io.imsave(os.path.join(a.output, os.path.splitext(f)[0] + "_labels.png"), masks.astype(np.uint16), check_contrast=False)
             w.writerow([f, n, round(area, 1), round(conf, 4), inv, round(time.perf_counter() - t, 3)])
             print(f"{f}: {n} nuclei, {time.perf_counter() - t:.2f}s", flush=True)
+    print(f"task {task}/{n_tasks}: {len(files)} images in {time.perf_counter() - started:.1f}s", flush=True)
 
 
 if __name__ == "__main__":
