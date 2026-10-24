@@ -1,0 +1,13 @@
+# Build the container and test it on the sample images, without pushing the image anywhere.
+#   gcloud builds submit --config cloudbuild.yaml .
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "nuclei-seg", "."]
+  - id: test-on-samples
+    name: nuclei-seg                     # the image built in the previous step
+    args: ["--input", "/workspace/sample", "--output", "/workspace/out", "--device", "cpu"]
+  - id: show-results
+    name: bash
+    args: ["-c", "cat /workspace/out/summary.csv && ls -la /workspace/out"]
+timeout: 1800s

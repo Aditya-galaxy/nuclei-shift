@@ -1,0 +1,6 @@
+# Upload only what the build needs.
+*
+!Dockerfile
+!predict.py
+!sample/
+!sample/*.png
