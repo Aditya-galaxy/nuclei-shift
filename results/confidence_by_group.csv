@@ -1,17 +1,17 @@
 condition,group,confidence,dsb_score,n_pred,n_true
-"cellpose nuclei, off the shelf",fluor_small,0.89,0.563,43.574,48.068
+"cellpose nuclei, off the shelf",fluor_small,0.89,0.565,43.834,48.308
 "cellpose nuclei, off the shelf",tissue_colour,0.692,0.001,12.083,42.361
-"cellpose nuclei, off the shelf",fluor_large,0.952,0.739,24.917,27.737
+"cellpose nuclei, off the shelf",fluor_large,0.952,0.736,23.809,26.664
 "cellpose nuclei, off the shelf",brightfield,0.559,0.0,2.438,84.062
-"cellpose nuclei, inverted when bright",fluor_small,0.89,0.563,43.574,48.068
+"cellpose nuclei, inverted when bright",fluor_small,0.89,0.565,43.834,48.308
 "cellpose nuclei, inverted when bright",tissue_colour,0.892,0.509,40.185,42.361
-"cellpose nuclei, inverted when bright",fluor_large,0.952,0.739,24.917,27.737
+"cellpose nuclei, inverted when bright",fluor_large,0.952,0.736,23.809,26.664
 "cellpose nuclei, inverted when bright",brightfield,0.879,0.454,65.812,84.062
-"cellpose cyto3, off the shelf",fluor_small,0.911,0.634,46.881,48.068
+"cellpose cyto3, off the shelf",fluor_small,0.911,0.636,47.125,48.308
 "cellpose cyto3, off the shelf",tissue_colour,0.867,0.321,37.139,42.361
-"cellpose cyto3, off the shelf",fluor_large,0.949,0.755,25.699,27.737
+"cellpose cyto3, off the shelf",fluor_large,0.949,0.753,24.603,26.664
 "cellpose cyto3, off the shelf",brightfield,0.917,0.004,54.562,84.062
-"cellpose cyto3, inverted when bright",fluor_small,0.911,0.634,46.881,48.068
+"cellpose cyto3, inverted when bright",fluor_small,0.911,0.636,47.125,48.308
 "cellpose cyto3, inverted when bright",tissue_colour,0.895,0.504,39.741,42.361
-"cellpose cyto3, inverted when bright",fluor_large,0.949,0.755,25.699,27.737
+"cellpose cyto3, inverted when bright",fluor_large,0.949,0.753,24.603,26.664
 "cellpose cyto3, inverted when bright",brightfield,0.893,0.461,64.5,84.062
