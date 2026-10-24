@@ -1,9 +1,9 @@
 """How many annotated images does it take to fix Cellpose on stained tissue?
 
 Stained-tissue images are split once: 58 for testing, 50 as a pool to train from. The Cellpose 'nuclei'
-model is fine-tuned on k images from the pool (k = 1, 2, 5, 10, 25, 50; three random draws for small k),
-with the same number of training steps for every k, on either the raw grey images or brightness-inverted
-ones. Each fine-tuned model is scored on the same 58 test images. Model files are deleted after scoring.
+model is fine-tuned on k images from the pool, with the same number of training steps for every k, on either
+the raw grey images or brightness-inverted ones. Runs (k, random draw) are listed in RUNS: repeated draws
+where the result varies most (small k), one draw elsewhere, to keep the total to about 16 training runs. Each fine-tuned model is scored on the same 58 test images. Model files are deleted after scoring.
 Writes results/finetune.csv (one row per test image, k, draw and variant).
 """
 import os, shutil, time
@@ -15,7 +15,8 @@ from cellpose import models, train
 import nuclei
 
 GROUP, N_TEST = "tissue_colour", 58
-KS = [1, 2, 5, 10, 25, 50]
+RUNS = {"raw": [(1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2), (5, 0), (5, 1), (10, 0), (25, 0), (50, 0)],
+        "inverted": [(1, 0), (1, 1), (5, 0), (25, 0), (50, 0)]}
 STEPS = dict(n_epochs=int(os.environ.get("FT_EPOCHS", 100)), nimg_per_epoch=32, batch_size=8, learning_rate=0.005, weight_decay=1e-5)
 gpu = torch.backends.mps.is_available()
 
@@ -39,8 +40,8 @@ t0 = time.time()
 for invert in [False, True]:
     variant = "inverted" if invert else "raw"
     test_x = [grey(i, invert) for i in test_ids]
-    for k in KS:
-        for draw in ([0] if k == len(pool) else [0, 1, 2]):
+    for k, draw in RUNS[variant]:
+        if True:
             if not done.empty and ((done.variant == variant) & (done.k == k) & (done.draw == draw)).any():
                 continue
             pick = list(np.random.default_rng(100 * k + draw).choice(pool, k, replace=False))
