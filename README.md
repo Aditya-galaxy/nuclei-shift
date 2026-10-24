@@ -89,7 +89,35 @@ three images in `sample/` and prints the summary, without pushing the image anyw
 and gave exactly the same results as a local run (22, 22 and 72 nuclei; the stained tissue image has 70 in the
 ground truth).
 
-<!-- COST -->
+### Running the whole dataset as a cloud batch job
+
+All 670 images were segmented as a Google Cloud Run Job (us-central1): 4 parallel tasks, each 2 vCPUs and 4 GiB,
+reading images from and writing labels to a Cloud Storage bucket mounted into the container. All 4 tasks
+succeeded. The bucket, image, job and service account were deleted afterwards.
+
+| Measure | Result |
+|---|---|
+| Wall time, 670 images, 4 tasks | 41 minutes |
+| Seconds per image on 2 cloud vCPUs | 12.5 on average: 4 for large-nucleus fluorescence, 7 for stained tissue, 15 for small-nucleus fluorescence, 54 for brightfield |
+| Seconds per image on a laptop GPU (Apple MPS), for comparison | about 1.1 |
+| Cost at list price (upper bound: every task billed for the full 41 minutes) | 19,816 vCPU-s and 39,632 GiB-s = **$0.44**, about **$0.65 per 1,000 images** |
+
+Prices are Cloud Run's instance-based rates for us-central1 ($0.000018 per vCPU-second, $0.000002 per
+GiB-second); jobs are billed for each task's whole lifetime. Adding tasks shortens wall time at roughly the same
+cost. Per-image timings are in `results/cloud_run_timings.csv`.
+
+**Same model, different hardware, slightly different results.** The cloud run used CPUs; the local run used the
+laptop GPU. Nucleus counts matched exactly on 62% of images, and scores moved by small but real amounts:
+
+| Group | Cloud CPU | Laptop GPU | Difference (95% interval) |
+|---|---|---|---|
+| Fluorescence, small | 0.552 | 0.565 | -0.013 [-0.019, -0.007] |
+| Fluorescence, large | 0.734 | 0.736 | -0.002 [-0.007, +0.002] |
+| Stained tissue | 0.483 | 0.509 | -0.026 [-0.040, -0.013] |
+| Brightfield | 0.463 | 0.454 | +0.009 [+0.000, +0.017] |
+
+None of the conclusions change, but a benchmark number is only reproducible together with the hardware it ran
+on. Comparison per image: `results/cloud_vs_local.csv`.
 
 ## Limitations
 
