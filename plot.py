@@ -32,17 +32,29 @@ ax.set_title("Accuracy by image type")
 ax.set_ylim(0, 1)
 ax.legend(fontsize=7.5)
 
-# 2. does Cellpose confidence track per-image accuracy?
+# 2. off the shelf, does each model's confidence drop where it fails?
 ax = axes[1]
-c = "cellpose nuclei, inverted when bright"
-d = per[(per.condition == c)].dropna(subset=["confidence"])
-for g in groups:
-    x = d[d.group == g]
-    ax.scatter(x.confidence, x.dsb_score, s=8, alpha=0.6, label=names[g].replace("\n", " "))
-ax.set_xlabel("mean Cellpose cell probability in the image")
-ax.set_ylabel("per-image score")
-ax.set_title("Confidence vs accuracy\n(nuclei model, inverted when bright)")
-ax.legend(fontsize=7)
+cg = pd.read_csv("results/confidence_by_group.csv")
+colours = dict(zip(groups, plt.rcParams["axes.prop_cycle"].by_key()["color"]))
+for cond, marker, label in [("cellpose nuclei, off the shelf", "o", "nuclei model"),
+                            ("cellpose cyto3, off the shelf", "^", "cyto3 model")]:
+    x = cg[cg.condition == cond].set_index("group")
+    for grp in groups:
+        ax.scatter(x.confidence[grp], x.dsb_score[grp], s=90, marker=marker, color=colours[grp],
+                   edgecolor="black", linewidth=0.6)
+    ax.scatter([], [], marker=marker, color="white", edgecolor="black", label=label)
+for grp in groups:
+    ax.scatter([], [], marker="s", color=colours[grp], label=names[grp].replace("\n", " "))
+ax.annotate("cyto3: confident,\nyet fails on brightfield", xy=(0.917, 0.004), xytext=(0.62, 0.25),
+            arrowprops=dict(arrowstyle="->", lw=0.8), fontsize=8)
+ax.annotate("nuclei model: confidence\ndrops where it fails", xy=(0.6, 0.0), xytext=(0.5, 0.5),
+            arrowprops=dict(arrowstyle="->", lw=0.8), fontsize=8)
+ax.set_xlim(0.45, 1.0)
+ax.set_ylim(-0.05, 0.85)
+ax.set_xlabel("mean Cellpose confidence (cell probability)")
+ax.set_ylabel("mean score")
+ax.set_title("Off the shelf: does confidence warn you?\n(one marker per model and image type)")
+ax.legend(fontsize=7, loc="upper left")
 
 # 3. fine-tuning on stained tissue
 if has_ft:

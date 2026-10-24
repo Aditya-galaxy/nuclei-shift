@@ -6,7 +6,8 @@ they were trained on, does their own confidence warn you when they fail, and how
 **Short answer:** Cellpose's nucleus model scores zero on stained tissue and brightfield images, because there
 the nuclei are dark on a bright background. One line of preprocessing (inverting brightness on bright images)
 recovers most of it. The specialist nucleus model's confidence flags its own failures almost perfectly; the
-generalist model stays confident while failing completely on brightfield images.
+generalist model stays confident while failing completely on brightfield images. With Cellpose's standard
+settings, fine-tuning on up to 50 annotated images does not catch up with the one-line fix.
 
 ## Data
 
@@ -57,7 +58,29 @@ Does Cellpose's confidence warn you? An image counts as failed below a score of 
 Mean confidence on brightfield images, off the shelf: nuclei model 0.56 (it finds 2 of 84 nuclei per image);
 cyto3 0.92 (it finds 55 objects per image, almost all wrong, score 0.004).
 
-<!-- FINETUNE -->
+### How many annotated images fix stained tissue?
+
+The 108 stained-tissue images were split once into 58 for testing and 50 to train from. The Cellpose nuclei
+model was fine-tuned on k of those images (Cellpose's standard settings: 100 epochs of 32 images, learning rate
+0.005, AdamW), on either the raw or the brightness-inverted images, and scored on the same 58 test images
+(`finetune.py`). Small k was repeated with different random draws.
+
+| Training images | Fine-tuned on raw images | Fine-tuned on inverted images |
+|---|---|---|
+| 0, off the shelf | 0.001 [0.000, 0.003] | |
+| 0, inverted only (the one-line fix) | | **0.509** [0.465, 0.549] |
+| 1 | 0.215 (draws 0.18 to 0.25) | 0.257 (draws 0.24, 0.28) |
+| 2 | 0.279 (draws 0.23 to 0.34) | |
+| 5 | 0.366 (draws 0.36, 0.37) | 0.384 |
+| 10 | 0.366 | |
+| 25 | 0.389 | 0.411 |
+| 50 | 0.411 [0.374, 0.445] | 0.393 [0.358, 0.428] |
+
+A fine-tuned model segments every image at one nucleus size taken from its training images, while the base
+model estimates the size of each image. To check that this is not what holds fine-tuning back, `size_check.py`
+scores the base model (inverted) on the same test images with one fixed size: 0.498, against 0.529 with
+automatic sizes and 0.544 with the true sizes. A fixed size costs about 0.03, far less than the gap.
+
 
 ![Results](results/figure.png)
 
@@ -77,6 +100,12 @@ cyto3 0.92 (it finds 55 objects per image, almost all wrong, score 0.004).
    flags failures only moderately (0.71).
 5. **Within a group, confidence is a weaker guide.** Once image type is accounted for, confidence and accuracy
    correlate at 0.26 to 0.56. Much of the warning signal is the model recognising an unfamiliar kind of image.
+6. **With standard settings, fine-tuning does not beat the one-line fix.** Even 50 annotated tissue images reach
+   0.41, against 0.51 for inverting brightness with no training. One annotated image does worse than no training
+   at all once the image is inverted (0.26 against 0.51): fine-tuning on so little data damages what the model
+   already knew. The fixed nucleus size of fine-tuned models explains only about 0.03 of the gap.
+7. **The same model gives slightly different results on different hardware** (see Deployment): up to 0.026 on
+   stained tissue between cloud CPUs and a laptop GPU.
 
 ## Deployment
 
@@ -126,6 +155,8 @@ on. Comparison per image: `results/cloud_vs_local.csv`.
 - Brightfield has only 16 images, so its intervals are wide.
 - Cellpose 3 models only; StarDist needs TensorFlow, and Cellpose 4's large Cellpose-SAM model was out of scope.
 - No per-image parameter tuning, deliberately: the question is what an off-the-shelf user gets.
+- Fine-tuning used Cellpose's standard settings without tuning the learning rate or number of steps; a gentler
+  recipe may do better with few images. Runs with 10 or more images used one random draw each.
 - Confidence is one simple measure, the mean cell probability inside predicted nuclei.
 
 ## Reproduce
@@ -139,7 +170,8 @@ python measure.py                 # per-image colour, brightness and nucleus siz
 python prepare.py                 # image groups and ground-truth label images
 python segment.py classical       # also cp_nuclei, cp_cyto3, cp_nuclei_inv, cp_cyto3_inv
 python evaluate.py                # tables in results/
-python finetune.py                # fine-tuning on stained tissue (about 2.5 hours on a laptop)
+python finetune.py                # fine-tuning on stained tissue (about 2.5 hours on a laptop GPU)
+python size_check.py              # does a fixed nucleus size explain the fine-tuning result?
 python plot.py                    # results/figure.png
 ```
 

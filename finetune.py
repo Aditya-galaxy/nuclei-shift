@@ -64,10 +64,11 @@ for invert in [False, True]:
 
 # baselines on the same test images, from the cached off-the-shelf runs (replaced on every run)
 rows = [r for r in rows if r["variant"] in ("raw", "inverted")]
+bright = g.set_index("id").bright
 for name, method in [("off the shelf", "cp_nuclei"), ("inverted, no training", "cp_nuclei_inv")]:
     for i in test_ids:
-        p = f"results/preds/{method}/{i}.npz"
-        if os.path.exists(p):
-            rows.append({"variant": name, "k": 0, "draw": 0, "id": i, **nuclei.scores(truth[i], np.load(p)["lab"])})
+        m = method if bright[i] else "cp_nuclei"   # dark images have no inverted run: same rule as evaluate.py
+        p = f"results/preds/{m}/{i}.npz"
+        rows.append({"variant": name, "k": 0, "draw": 0, "id": i, **nuclei.scores(truth[i], np.load(p)["lab"])})
 pd.DataFrame(rows).to_csv(out_path, index=False)
 print("done")
