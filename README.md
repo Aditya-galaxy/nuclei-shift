@@ -176,3 +176,8 @@ python plot.py                    # results/figure.png
 ```
 
 Cellpose 3 needs Python 3.12: its NumPy requirement has no build for Python 3.13.
+
+## License
+
+Code: MIT (see `LICENSE`). BBBC038v1 images, including the three in `sample/`, are CC0; please cite
+Caicedo et al., *Nature Methods* 2019 when using the dataset.
